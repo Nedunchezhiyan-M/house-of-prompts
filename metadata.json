@@ -1,0 +1,5 @@
+{
+  "name": "Prompt Library",
+  "description": "A web application to store, search, and manage a library of prompts. Users can add new prompts, search existing ones by topic, and copy them to the clipboard with a single click.",
+  "requestFramePermissions": []
+}
