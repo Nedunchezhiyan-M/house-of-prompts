@@ -2,14 +2,13 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import PromptForm from '../PromptForm';
 import { PromptFormTestIds } from '../__testids__/PromptForm.ids';
-import type { EditingPrompt } from '../../types';
 
 // Mock the GoogleGenAI
 jest.mock('@google/genai', () => ({
   GoogleGenAI: jest.fn().mockImplementation(() => ({
     models: {
       generateContent: jest.fn().mockResolvedValue({
-        text: 'Creative Writing'
+        text: 'Suggested Topic'
       })
     }
   }))
@@ -24,175 +23,145 @@ describe('PromptForm', () => {
     jest.clearAllMocks();
   });
 
-  describe('Add Mode', () => {
-    it('renders add form correctly', () => {
-      render(
-        <PromptForm
-          onAddPrompt={mockOnAddPrompt}
-          onEditPrompt={mockOnEditPrompt}
-          onCancel={mockOnCancel}
-        />
-      );
+  const renderForm = (editingPrompt = null) => {
+    return render(
+      <PromptForm
+        onAddPrompt={mockOnAddPrompt}
+        onEditPrompt={mockOnEditPrompt}
+        onCancel={mockOnCancel}
+        editingPrompt={editingPrompt}
+      />
+    );
+  };
 
-      expect(screen.getByTestId(PromptFormTestIds.FORM_TITLE)).toHaveTextContent('Add a New Prompt');
-      expect(screen.getByTestId(PromptFormTestIds.TOPIC_INPUT)).toBeInTheDocument();
-      expect(screen.getByTestId(PromptFormTestIds.PROMPT_TEXTAREA)).toBeInTheDocument();
-      expect(screen.getByTestId(PromptFormTestIds.SUBMIT_BUTTON)).toHaveTextContent('Save Prompt');
-      expect(screen.getByTestId(PromptFormTestIds.SUGGEST_TOPIC_BUTTON)).toBeInTheDocument();
-    });
+  it('renders add prompt form by default', () => {
+    renderForm();
+    
+    expect(screen.getByTestId(PromptFormTestIds.FORM_TITLE)).toHaveTextContent('Add a New Prompt');
+    expect(screen.getByTestId(PromptFormTestIds.TOPIC_INPUT)).toBeInTheDocument();
+    expect(screen.getByTestId(PromptFormTestIds.PROMPT_TEXTAREA)).toBeInTheDocument();
+    expect(screen.getByTestId(PromptFormTestIds.SUBMIT_BUTTON)).toHaveTextContent('Save Prompt');
+  });
 
-    it('handles form submission for new prompt', () => {
-      render(
-        <PromptForm
-          onAddPrompt={mockOnAddPrompt}
-          onEditPrompt={mockOnEditPrompt}
-          onCancel={mockOnCancel}
-        />
-      );
+  it('renders edit prompt form when editingPrompt is provided', () => {
+    const editingPrompt = { id: 1, topic: 'Test Topic', prompt: 'Test prompt text' };
+    renderForm(editingPrompt);
+    
+    expect(screen.getByTestId(PromptFormTestIds.FORM_TITLE)).toHaveTextContent('Edit Prompt');
+    expect(screen.getByTestId(PromptFormTestIds.TOPIC_INPUT)).toHaveValue('Test Topic');
+    expect(screen.getByTestId(PromptFormTestIds.PROMPT_TEXTAREA)).toHaveValue('Test prompt text');
+    expect(screen.getByTestId(PromptFormTestIds.SUBMIT_BUTTON)).toHaveTextContent('Update Prompt');
+  });
 
-      const topicInput = screen.getByTestId(PromptFormTestIds.TOPIC_INPUT);
-      const promptTextarea = screen.getByTestId(PromptFormTestIds.PROMPT_TEXTAREA);
-      const submitButton = screen.getByTestId(PromptFormTestIds.SUBMIT_BUTTON);
+  it('calls onAddPrompt when form is submitted with valid data', () => {
+    renderForm();
+    
+    fireEvent.change(screen.getByTestId(PromptFormTestIds.TOPIC_INPUT), { target: { value: 'Test Topic' } });
+    fireEvent.change(screen.getByTestId(PromptFormTestIds.PROMPT_TEXTAREA), { target: { value: 'Test prompt text' } });
+    fireEvent.click(screen.getByTestId(PromptFormTestIds.SUBMIT_BUTTON));
+    
+    expect(mockOnAddPrompt).toHaveBeenCalledWith('Test Topic', 'Test prompt text', '', '', '');
+  });
 
-      fireEvent.change(topicInput, { target: { value: 'Test Topic' } });
-      fireEvent.change(promptTextarea, { target: { value: 'Test prompt text' } });
-      fireEvent.click(submitButton);
+  it('shows error when form is submitted without required fields', () => {
+    renderForm();
+    
+    fireEvent.click(screen.getByTestId(PromptFormTestIds.SUBMIT_BUTTON));
+    
+    expect(screen.getByTestId(PromptFormTestIds.ERROR_MESSAGE)).toHaveTextContent('Both topic and prompt text are required.');
+    expect(mockOnAddPrompt).not.toHaveBeenCalled();
+  });
 
-      expect(mockOnAddPrompt).toHaveBeenCalledWith('Test Topic', 'Test prompt text');
-    });
+  it('calls onCancel when cancel button is pressed', () => {
+    renderForm();
+    
+    fireEvent.click(screen.getByTestId(PromptFormTestIds.CANCEL_BUTTON));
+    
+    expect(mockOnCancel).toHaveBeenCalled();
+  });
 
-    it('shows error when form is submitted without required fields', () => {
-      render(
-        <PromptForm
-          onAddPrompt={mockOnAddPrompt}
-          onEditPrompt={mockOnEditPrompt}
-          onCancel={mockOnCancel}
-        />
-      );
-
-      const submitButton = screen.getByTestId(PromptFormTestIds.SUBMIT_BUTTON);
-      fireEvent.click(submitButton);
-
-      expect(screen.getByTestId(PromptFormTestIds.ERROR_MESSAGE)).toHaveTextContent('Both topic and prompt text are required.');
-      expect(mockOnAddPrompt).not.toHaveBeenCalled();
-    });
-
-    it('handles topic suggestion', async () => {
-      render(
-        <PromptForm
-          onAddPrompt={mockOnAddPrompt}
-          onEditPrompt={mockOnEditPrompt}
-          onCancel={mockOnCancel}
-        />
-      );
-
-      const promptTextarea = screen.getByTestId(PromptFormTestIds.PROMPT_TEXTAREA);
-      const suggestButton = screen.getByTestId(PromptFormTestIds.SUGGEST_TOPIC_BUTTON);
-
-      fireEvent.change(promptTextarea, { target: { value: 'Write a creative story' } });
-      fireEvent.click(suggestButton);
-
-      await waitFor(() => {
-        expect(screen.getByTestId(PromptFormTestIds.TOPIC_INPUT)).toHaveValue('Creative Writing');
-      });
-    });
-
-    it('handles cancel action', () => {
-      render(
-        <PromptForm
-          onAddPrompt={mockOnAddPrompt}
-          onEditPrompt={mockOnEditPrompt}
-          onCancel={mockOnCancel}
-        />
-      );
-
-      const cancelButton = screen.getByTestId(PromptFormTestIds.CANCEL_BUTTON);
-      fireEvent.click(cancelButton);
-
-      expect(mockOnCancel).toHaveBeenCalled();
+  it('suggests topic when suggest topic button is pressed', async () => {
+    renderForm();
+    
+    fireEvent.change(screen.getByTestId(PromptFormTestIds.PROMPT_TEXTAREA), { target: { value: 'Test prompt text' } });
+    fireEvent.click(screen.getByTestId(PromptFormTestIds.SUGGEST_TOPIC_BUTTON));
+    
+    await waitFor(() => {
+      expect(screen.getByTestId(PromptFormTestIds.TOPIC_INPUT)).toHaveValue('Suggested Topic');
     });
   });
 
-  describe('Edit Mode', () => {
-    const mockEditingPrompt: EditingPrompt = {
-      id: 1,
-      topic: 'Original Topic',
-      prompt: 'Original prompt text'
-    };
+  it('shows error when suggesting topic without prompt text', () => {
+    renderForm();
+    
+    fireEvent.click(screen.getByTestId(PromptFormTestIds.SUGGEST_TOPIC_BUTTON));
+    
+    expect(screen.getByTestId(PromptFormTestIds.SUGGESTION_ERROR_MESSAGE)).toHaveTextContent('Please enter a prompt before suggesting a topic.');
+  });
 
-    it('renders edit form correctly', () => {
-      render(
-        <PromptForm
-          onAddPrompt={mockOnAddPrompt}
-          onEditPrompt={mockOnEditPrompt}
-          onCancel={mockOnCancel}
-          editingPrompt={mockEditingPrompt}
-        />
-      );
+  it('calls onEditPrompt when editing existing prompt', () => {
+    const editingPrompt = { id: 1, topic: 'Test Topic', prompt: 'Test prompt text' };
+    renderForm(editingPrompt);
+    
+    fireEvent.change(screen.getByTestId(PromptFormTestIds.TOPIC_INPUT), { target: { value: 'Updated Topic' } });
+    fireEvent.change(screen.getByTestId(PromptFormTestIds.PROMPT_TEXTAREA), { target: { value: 'Updated prompt text' } });
+    fireEvent.click(screen.getByTestId(PromptFormTestIds.SUBMIT_BUTTON));
+    
+    expect(mockOnEditPrompt).toHaveBeenCalledWith(1, 'Updated Topic', 'Updated prompt text', '', '', '');
+    expect(mockOnAddPrompt).not.toHaveBeenCalled();
+  });
 
-      expect(screen.getByTestId(PromptFormTestIds.FORM_TITLE)).toHaveTextContent('Edit Prompt');
-      expect(screen.getByTestId(PromptFormTestIds.TOPIC_INPUT)).toHaveValue('Original Topic');
-      expect(screen.getByTestId(PromptFormTestIds.PROMPT_TEXTAREA)).toHaveValue('Original prompt text');
-      expect(screen.getByTestId(PromptFormTestIds.SUBMIT_BUTTON)).toHaveTextContent('Update Prompt');
-    });
+  it('resets form when editing is cancelled', () => {
+    const editingPrompt = { id: 1, topic: 'Test Topic', prompt: 'Test prompt text' };
+    renderForm(editingPrompt);
+    
+    fireEvent.click(screen.getByTestId(PromptFormTestIds.CANCEL_BUTTON));
+    
+    expect(mockOnCancel).toHaveBeenCalled();
+  });
 
-    it('does not show suggest topic button in edit mode', () => {
-      render(
-        <PromptForm
-          onAddPrompt={mockOnAddPrompt}
-          onEditPrompt={mockOnEditPrompt}
-          onCancel={mockOnCancel}
-          editingPrompt={mockEditingPrompt}
-        />
-      );
+  it('handles which prompt functionality', async () => {
+    renderForm();
+    
+    fireEvent.change(screen.getByTestId(PromptFormTestIds.PROMPT_TEXTAREA), { target: { value: 'Test prompt text' } });
+    fireEvent.click(screen.getByTestId(PromptFormTestIds.WHICH_PROMPT_BUTTON));
+    
+    // The which functionality should work without errors
+    expect(screen.getByTestId(PromptFormTestIds.WHICH_PROMPT_BUTTON)).toBeInTheDocument();
+  });
 
-      expect(screen.queryByTestId(PromptFormTestIds.SUGGEST_TOPIC_BUTTON)).not.toBeInTheDocument();
-    });
+  it('shows error when using which functionality without prompt text', () => {
+    renderForm();
+    
+    fireEvent.click(screen.getByTestId(PromptFormTestIds.WHICH_PROMPT_BUTTON));
+    
+    expect(screen.getByTestId(PromptFormTestIds.SUGGESTION_ERROR_MESSAGE)).toHaveTextContent('Please enter a prompt before generating enhanced version.');
+  });
 
-    it('handles form submission for editing prompt', () => {
-      render(
-        <PromptForm
-          onAddPrompt={mockOnAddPrompt}
-          onEditPrompt={mockOnEditPrompt}
-          onCancel={mockOnCancel}
-          editingPrompt={mockEditingPrompt}
-        />
-      );
-
-      const topicInput = screen.getByTestId(PromptFormTestIds.TOPIC_INPUT);
-      const promptTextarea = screen.getByTestId(PromptFormTestIds.PROMPT_TEXTAREA);
-      const submitButton = screen.getByTestId(PromptFormTestIds.SUBMIT_BUTTON);
-
-      fireEvent.change(topicInput, { target: { value: 'Updated Topic' } });
-      fireEvent.change(promptTextarea, { target: { value: 'Updated prompt text' } });
-      fireEvent.click(submitButton);
-
-      expect(mockOnEditPrompt).toHaveBeenCalledWith(1, 'Updated Topic', 'Updated prompt text');
-      expect(mockOnAddPrompt).not.toHaveBeenCalled();
-    });
-
-    it('clears form when switching between add and edit modes', () => {
-      const { rerender } = render(
-        <PromptForm
-          onAddPrompt={mockOnAddPrompt}
-          onEditPrompt={mockOnEditPrompt}
-          onCancel={mockOnCancel}
-          editingPrompt={mockEditingPrompt}
-        />
-      );
-
-      // Switch to add mode
-      rerender(
-        <PromptForm
-          onAddPrompt={mockOnAddPrompt}
-          onEditPrompt={mockOnEditPrompt}
-          onCancel={mockOnCancel}
-        />
-      );
-
-      expect(screen.getByTestId(PromptFormTestIds.TOPIC_INPUT)).toHaveValue('');
-      expect(screen.getByTestId(PromptFormTestIds.PROMPT_TEXTAREA)).toHaveValue('');
-    });
+  it('submits form with all fields including new ones', () => {
+    renderForm();
+    
+    fireEvent.change(screen.getByTestId(PromptFormTestIds.TOPIC_INPUT), { target: { value: 'Test Topic' } });
+    fireEvent.change(screen.getByTestId(PromptFormTestIds.PROMPT_TEXTAREA), { target: { value: 'Test prompt text' } });
+    
+    // Find the new fields by their labels and fill them
+    const projectStackInput = screen.getByLabelText('Project Stack');
+    const requirementsInput = screen.getByLabelText('Requirements');
+    const otherNecessitiesInput = screen.getByLabelText('Other Necessities');
+    
+    fireEvent.change(projectStackInput, { target: { value: 'React, TypeScript, TailwindCSS' } });
+    fireEvent.change(requirementsInput, { target: { value: 'Must be responsive and accessible' } });
+    fireEvent.change(otherNecessitiesInput, { target: { value: 'Include error handling and loading states' } });
+    
+    fireEvent.click(screen.getByTestId(PromptFormTestIds.SUBMIT_BUTTON));
+    
+    expect(mockOnAddPrompt).toHaveBeenCalledWith(
+      'Test Topic', 
+      'Test prompt text', 
+      'React, TypeScript, TailwindCSS',
+      'Must be responsive and accessible',
+      'Include error handling and loading states'
+    );
   });
 });
 

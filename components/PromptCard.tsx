@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { Prompt } from '../types';
 import { ClipboardIcon } from './icons/ClipboardIcon';
 import { PromptCardTestIds } from './__testids__/PromptCard.ids';
+import GetPromptModal from './GetPromptModal';
 
 interface PromptCardProps {
   prompt: Prompt;
@@ -13,6 +14,7 @@ const PromptCard: React.FC<PromptCardProps> = ({ prompt, onEdit, onDelete }) => 
   const [copied, setCopied] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
+  const [showGetPromptModal, setShowGetPromptModal] = useState(false);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(prompt.prompt).then(() => {
@@ -45,10 +47,18 @@ const PromptCard: React.FC<PromptCardProps> = ({ prompt, onEdit, onDelete }) => 
     setDeleteConfirmation('');
   };
 
+  const handleGetPrompt = () => {
+    setShowGetPromptModal(true);
+  };
+
+  const handleCloseGetPromptModal = () => {
+    setShowGetPromptModal(false);
+  };
+
   return (
     <>
-      <div className="bg-base rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300 ease-in-out flex flex-col h-72 overflow-hidden" data-testid={PromptCardTestIds.CARD}>
-        <div className="p-6 flex flex-col flex-grow min-h-0">
+      <div className="bg-base rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300 ease-in-out flex flex-col" data-testid={PromptCardTestIds.CARD}>
+        <div className="p-6 flex flex-col">
           <div className="flex justify-between items-start mb-3">
             <h3 className="text-xl font-bold text-primary mr-4" data-testid={PromptCardTestIds.TOPIC_HEADING}>{prompt.topic}</h3>
             <div className="flex items-center gap-2">
@@ -64,6 +74,17 @@ const PromptCard: React.FC<PromptCardProps> = ({ prompt, onEdit, onDelete }) => 
                 </svg>
               </button>
               <button
+                onClick={handleGetPrompt}
+                className="p-2 rounded-full text-gray-500 hover:bg-gray-200 hover:text-green-600 focus:outline-none focus:ring-2 focus:ring-green-400 flex-shrink-0"
+                aria-label="Get enhanced prompt"
+                title="Get enhanced prompt"
+                data-testid={PromptCardTestIds.GET_PROMPT_BUTTON}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                </svg>
+              </button>
+              <button
                 onClick={handleDeleteClick}
                 className="p-2 rounded-full text-gray-500 hover:bg-gray-200 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-400 flex-shrink-0"
                 aria-label="Delete prompt"
@@ -74,7 +95,8 @@ const PromptCard: React.FC<PromptCardProps> = ({ prompt, onEdit, onDelete }) => 
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
               </button>
-              <button
+              {/*
+               <button
                 onClick={handleCopy}
                 className="relative p-2 rounded-full text-gray-500 hover:bg-gray-200 hover:text-primary focus:outline-none focus:ring-2 focus:ring-accent flex-shrink-0"
                 aria-label="Copy prompt to clipboard"
@@ -88,13 +110,55 @@ const PromptCard: React.FC<PromptCardProps> = ({ prompt, onEdit, onDelete }) => 
                   </span>
                 )}
               </button>
+              */}
             </div>
           </div>
-          <div className="overflow-y-auto flex-grow pr-2">
-              <p className="text-text-secondary leading-relaxed whitespace-pre-wrap" data-testid={PromptCardTestIds.PROMPT_TEXT}>{prompt.prompt}</p>
+          
+          <div className="space-y-4">
+            <div>
+              <h4 className="text-sm font-semibold text-text-primary mb-2">Prompt</h4>
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <p className="text-text-secondary leading-relaxed whitespace-pre-wrap" data-testid={PromptCardTestIds.PROMPT_TEXT}>{prompt.prompt}</p>
+              </div>
+            </div>
+            
+            {prompt.projectStack && (
+              <div>
+                <h4 className="text-sm font-semibold text-text-primary mb-2">Project Stack</h4>
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <p className="text-text-secondary leading-relaxed whitespace-pre-wrap">{prompt.projectStack}</p>
+                </div>
+              </div>
+            )}
+            
+            {prompt.requirements && (
+              <div>
+                <h4 className="text-sm font-semibold text-text-primary mb-2">Requirements</h4>
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <p className="text-text-secondary leading-relaxed whitespace-pre-wrap">{prompt.requirements}</p>
+                </div>
+              </div>
+            )}
+            
+            {prompt.otherNecessities && (
+              <div>
+                <h4 className="text-sm font-semibold text-text-primary mb-2">Other Necessities</h4>
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <p className="text-text-secondary leading-relaxed whitespace-pre-wrap">{prompt.otherNecessities}</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Get Prompt Modal */}
+      {showGetPromptModal && (
+        <GetPromptModal
+          prompt={prompt}
+          onClose={handleCloseGetPromptModal}
+        />
+      )}
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (

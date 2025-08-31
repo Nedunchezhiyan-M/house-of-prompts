@@ -6,6 +6,7 @@ export const PromptFormTestIds = {
   SUBMIT_BUTTON: 'prompt-form-submit-button',
   CANCEL_BUTTON: 'prompt-form-cancel-button',
   SUGGEST_TOPIC_BUTTON: 'prompt-form-suggest-topic-button',
+  WHICH_PROMPT_BUTTON: 'prompt-form-which-prompt-button',
   
   // Labels
   TOPIC_LABEL: 'prompt-form-topic-label',

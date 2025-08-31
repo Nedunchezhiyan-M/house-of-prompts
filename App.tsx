@@ -24,20 +24,23 @@ const App: React.FC = () => {
     }
   }, [prompts, isInitialLoad]);
 
-  const handleAddPrompt = useCallback((topic: string, promptText: string) => {
+  const handleAddPrompt = useCallback((topic: string, promptText: string, projectStack?: string, requirements?: string, otherNecessities?: string) => {
     const newPrompt: Prompt = {
       id: Date.now(),
       topic,
       prompt: promptText,
+      projectStack,
+      requirements,
+      otherNecessities,
     };
     setPrompts(prevPrompts => [newPrompt, ...prevPrompts]);
     setIsFormVisible(false);
   }, []);
 
-  const handleEditPrompt = useCallback((id: number, topic: string, promptText: string) => {
+  const handleEditPrompt = useCallback((id: number, topic: string, promptText: string, projectStack?: string, requirements?: string, otherNecessities?: string) => {
     setPrompts(prevPrompts => 
       prevPrompts.map(p => 
-        p.id === id ? { ...p, topic, prompt: promptText } : p
+        p.id === id ? { ...p, topic, prompt: promptText, projectStack, requirements, otherNecessities } : p
       )
     );
     setEditingPrompt(null);

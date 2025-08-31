@@ -6,6 +6,7 @@ export const PromptCardTestIds = {
   
   // Action buttons
   EDIT_BUTTON: 'prompt-card-edit-button',
+  GET_PROMPT_BUTTON: 'prompt-card-get-prompt-button',
   DELETE_BUTTON: 'prompt-card-delete-button',
   COPY_BUTTON: 'prompt-card-copy-button',
   
@@ -14,9 +15,9 @@ export const PromptCardTestIds = {
   
   // Delete confirmation modal
   DELETE_MODAL: 'prompt-card-delete-modal',
+  DELETE_WARNING_TEXT: 'prompt-card-delete-warning-text',
   DELETE_CONFIRMATION_INPUT: 'prompt-card-delete-confirmation-input',
   DELETE_CONFIRM_BUTTON: 'prompt-card-delete-confirm-button',
   DELETE_CANCEL_BUTTON: 'prompt-card-delete-cancel-button',
-  DELETE_WARNING_TEXT: 'prompt-card-delete-warning-text',
 } as const;
 

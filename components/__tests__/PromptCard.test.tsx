@@ -4,6 +4,18 @@ import PromptCard from '../PromptCard';
 import { PromptCardTestIds } from '../__testids__/PromptCard.ids';
 import type { Prompt } from '../../types';
 
+// Mock the GetPromptModal component
+jest.mock('../GetPromptModal', () => {
+  return function MockGetPromptModal({ prompt, onClose }: any) {
+    return (
+      <div data-testid="get-prompt-modal">
+        <button onClick={onClose} data-testid="mock-close-button">Close</button>
+        <div>Mock GetPromptModal for {prompt.topic}</div>
+      </div>
+    );
+  };
+});
+
 // Mock navigator.clipboard
 Object.assign(navigator, {
   clipboard: {
@@ -18,6 +30,15 @@ describe('PromptCard', () => {
     prompt: 'This is a test prompt text that should be displayed in the card.'
   };
 
+  const mockPromptWithAllFields: Prompt = {
+    id: 2,
+    topic: 'Full Prompt',
+    prompt: 'This is a comprehensive prompt with all fields.',
+    projectStack: 'React, TypeScript, TailwindCSS',
+    requirements: 'Must be responsive and accessible',
+    otherNecessities: 'Include error handling and loading states'
+  };
+
   const mockOnEdit = jest.fn();
   const mockOnDelete = jest.fn();
 
@@ -25,7 +46,7 @@ describe('PromptCard', () => {
     jest.clearAllMocks();
   });
 
-  it('renders prompt card correctly', () => {
+  it('renders prompt card correctly with basic fields', () => {
     render(
       <PromptCard
         prompt={mockPrompt}
@@ -37,6 +58,57 @@ describe('PromptCard', () => {
     expect(screen.getByTestId(PromptCardTestIds.CARD)).toBeInTheDocument();
     expect(screen.getByTestId(PromptCardTestIds.TOPIC_HEADING)).toHaveTextContent('Test Topic');
     expect(screen.getByTestId(PromptCardTestIds.PROMPT_TEXT)).toHaveTextContent('This is a test prompt text that should be displayed in the card.');
+  });
+
+  it('renders prompt card with all fields when provided', () => {
+    render(
+      <PromptCard
+        prompt={mockPromptWithAllFields}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+      />
+    );
+
+    expect(screen.getByTestId(PromptCardTestIds.CARD)).toBeInTheDocument();
+    expect(screen.getByTestId(PromptCardTestIds.TOPIC_HEADING)).toHaveTextContent('Full Prompt');
+    expect(screen.getByTestId(PromptCardTestIds.PROMPT_TEXT)).toHaveTextContent('This is a comprehensive prompt with all fields.');
+    
+    // Check for new fields
+    expect(screen.getByText('Project Stack')).toBeInTheDocument();
+    expect(screen.getByText('React, TypeScript, TailwindCSS')).toBeInTheDocument();
+    expect(screen.getByText('Requirements')).toBeInTheDocument();
+    expect(screen.getByText('Must be responsive and accessible')).toBeInTheDocument();
+    expect(screen.getByText('Other Necessities')).toBeInTheDocument();
+    expect(screen.getByText('Include error handling and loading states')).toBeInTheDocument();
+  });
+
+  it('does not render optional fields when they are not provided', () => {
+    render(
+      <PromptCard
+        prompt={mockPrompt}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+      />
+    );
+
+    expect(screen.queryByText('Project Stack')).not.toBeInTheDocument();
+    expect(screen.queryByText('Requirements')).not.toBeInTheDocument();
+    expect(screen.queryByText('Other Necessities')).not.toBeInTheDocument();
+  });
+
+  it('displays all action buttons', () => {
+    render(
+      <PromptCard
+        prompt={mockPrompt}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+      />
+    );
+
+    expect(screen.getByTestId(PromptCardTestIds.EDIT_BUTTON)).toBeInTheDocument();
+    expect(screen.getByTestId(PromptCardTestIds.GET_PROMPT_BUTTON)).toBeInTheDocument();
+    expect(screen.getByTestId(PromptCardTestIds.DELETE_BUTTON)).toBeInTheDocument();
+    expect(screen.getByTestId(PromptCardTestIds.COPY_BUTTON)).toBeInTheDocument();
   });
 
   it('handles edit button click', () => {
@@ -52,6 +124,44 @@ describe('PromptCard', () => {
     fireEvent.click(editButton);
 
     expect(mockOnEdit).toHaveBeenCalledWith(mockPrompt);
+  });
+
+  it('handles get prompt button click', () => {
+    render(
+      <PromptCard
+        prompt={mockPrompt}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+      />
+    );
+
+    const getPromptButton = screen.getByTestId(PromptCardTestIds.GET_PROMPT_BUTTON);
+    fireEvent.click(getPromptButton);
+
+    // Check that the modal is displayed
+    expect(screen.getByTestId('get-prompt-modal')).toBeInTheDocument();
+    expect(screen.getByText('Mock GetPromptModal for Test Topic')).toBeInTheDocument();
+  });
+
+  it('closes get prompt modal when close button is clicked', () => {
+    render(
+      <PromptCard
+        prompt={mockPrompt}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+      />
+    );
+
+    // Open the modal
+    const getPromptButton = screen.getByTestId(PromptCardTestIds.GET_PROMPT_BUTTON);
+    fireEvent.click(getPromptButton);
+
+    // Close the modal
+    const closeButton = screen.getByTestId('mock-close-button');
+    fireEvent.click(closeButton);
+
+    // Modal should be closed
+    expect(screen.queryByTestId('get-prompt-modal')).not.toBeInTheDocument();
   });
 
   it('handles copy button click successfully', async () => {
@@ -228,12 +338,33 @@ describe('PromptCard', () => {
     );
 
     const editButton = screen.getByTestId(PromptCardTestIds.EDIT_BUTTON);
+    const getPromptButton = screen.getByTestId(PromptCardTestIds.GET_PROMPT_BUTTON);
     const deleteButton = screen.getByTestId(PromptCardTestIds.DELETE_BUTTON);
     const copyButton = screen.getByTestId(PromptCardTestIds.COPY_BUTTON);
 
     expect(editButton).toHaveAttribute('title', 'Edit prompt');
+    expect(getPromptButton).toHaveAttribute('title', 'Get enhanced prompt');
     expect(deleteButton).toHaveAttribute('title', 'Delete prompt');
     expect(copyButton).toHaveAttribute('title', 'Copy to clipboard');
+  });
+
+  it('displays prompt text with proper line breaks using whitespace-pre-wrap', () => {
+    const promptWithLineBreaks: Prompt = {
+      id: 3,
+      topic: 'Line Break Test',
+      prompt: 'First line\nSecond line\nThird line'
+    };
+
+    render(
+      <PromptCard
+        prompt={promptWithLineBreaks}
+        onEdit={mockOnEdit}
+        onDelete={mockOnDelete}
+      />
+    );
+
+    const promptText = screen.getByTestId(PromptCardTestIds.PROMPT_TEXT);
+    expect(promptText).toHaveTextContent('First line\nSecond line\nThird line');
   });
 });
 
