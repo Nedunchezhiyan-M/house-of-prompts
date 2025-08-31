@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import type { Prompt } from './types';
+import type { Prompt, EditingPrompt } from './types';
 import { getPrompts, savePrompts } from './services/promptService';
 import PromptCard from './components/PromptCard';
 import SearchBar from './components/SearchBar';
@@ -11,6 +11,7 @@ const App: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [isFormVisible, setIsFormVisible] = useState<boolean>(false);
   const [isInitialLoad, setIsInitialLoad] = useState<boolean>(true);
+  const [editingPrompt, setEditingPrompt] = useState<EditingPrompt | null>(null);
 
   useEffect(() => {
     setPrompts(getPrompts());
@@ -33,6 +34,30 @@ const App: React.FC = () => {
     setIsFormVisible(false);
   }, []);
 
+  const handleEditPrompt = useCallback((id: number, topic: string, promptText: string) => {
+    setPrompts(prevPrompts => 
+      prevPrompts.map(p => 
+        p.id === id ? { ...p, topic, prompt: promptText } : p
+      )
+    );
+    setEditingPrompt(null);
+    setIsFormVisible(false);
+  }, []);
+
+  const handleDeletePrompt = useCallback((id: number) => {
+    setPrompts(prevPrompts => prevPrompts.filter(p => p.id !== id));
+  }, []);
+
+  const handleStartEdit = useCallback((prompt: Prompt) => {
+    setEditingPrompt(prompt);
+    setIsFormVisible(true);
+  }, []);
+
+  const handleCancelForm = useCallback(() => {
+    setIsFormVisible(false);
+    setEditingPrompt(null);
+  }, []);
+
   const filteredPrompts = useMemo(() => {
     if (!searchTerm) {
       return prompts;
@@ -50,7 +75,12 @@ const App: React.FC = () => {
             Prompt Library
           </h1>
           <button
-            onClick={() => setIsFormVisible(!isFormVisible)}
+            onClick={() => {
+              setIsFormVisible(!isFormVisible);
+              if (isFormVisible) {
+                setEditingPrompt(null);
+              }
+            }}
             className="flex items-center gap-2 bg-accent hover:bg-secondary text-white font-bold py-2 px-4 rounded-lg shadow-lg transition-transform transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-75"
             aria-label={isFormVisible ? 'Close prompt form' : 'Open prompt form'}
           >
@@ -63,7 +93,12 @@ const App: React.FC = () => {
       <main className="container mx-auto p-4 sm:p-6 lg:p-8">
         {isFormVisible && (
           <div className="mb-8">
-            <PromptForm onAddPrompt={handleAddPrompt} onCancel={() => setIsFormVisible(false)} />
+            <PromptForm 
+              onAddPrompt={handleAddPrompt} 
+              onEditPrompt={handleEditPrompt}
+              onCancel={handleCancelForm}
+              editingPrompt={editingPrompt}
+            />
           </div>
         )}
 
@@ -74,7 +109,12 @@ const App: React.FC = () => {
         {filteredPrompts.length > 0 ? (
           <div className="max-h-[36rem] overflow-y-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pr-2">
             {filteredPrompts.map(prompt => (
-              <PromptCard key={prompt.id} prompt={prompt} />
+              <PromptCard 
+                key={prompt.id} 
+                prompt={prompt}
+                onEdit={handleStartEdit}
+                onDelete={handleDeletePrompt}
+              />
             ))}
           </div>
         ) : (
